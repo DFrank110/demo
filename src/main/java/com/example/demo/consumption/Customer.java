@@ -22,4 +22,15 @@ public class Customer {
         }
         return sum;
     }
+
+    public BigDecimal paySum(List<BigDecimal> fruits){
+        if(CollectionUtils.isEmpty(fruits)){
+            return BigDecimal.ZERO;
+        }
+        BigDecimal sum = BigDecimal.ZERO;
+        for (BigDecimal price: fruits) {
+            sum = sum.add(price);
+        }
+        return sum;
+    }
 }

@@ -2,19 +2,13 @@ package com.example.demo;
 
 import com.example.demo.consumption.Customer;
 import com.example.demo.exception.CustomException;
-import com.example.demo.product.Apple;
-import com.example.demo.product.Fruits;
-import com.example.demo.product.Mango;
-import com.example.demo.product.Strawberry;
+import com.example.demo.product.*;
 import com.example.demo.service.FruitContext;
-import com.example.demo.service.RebateStrategy;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 @SpringBootTest
 class DemoApplicationTests {
@@ -31,6 +25,11 @@ class DemoApplicationTests {
          mango = new Mango();
          mango.setPrice(new BigDecimal("20"));
      }
+     // 打8折
+     private static final Double TWENTY_PERCENT_OFF = 0.8;
+     // 不打折
+     private static final Double NO_DISCOUNT = 0.8;
+
     @Test
     void contextLoads() throws CustomException{
         Scanner input = new Scanner(System.in);
@@ -125,17 +124,33 @@ class DemoApplicationTests {
         }
         apple.setWeight(appleWeight);
         strawberry.setWeight(strawberryWeight);
-        strawberry.setRate(new BigDecimal("0.8"));
         mango.setWeight(mangoWeight);
+        // 草莓折扣8折
+        FruitContext strawberryContext = new FruitContext<Double>(new Strawberry());
+        BigDecimal strawberryAmount = strawberryContext.out(TWENTY_PERCENT_OFF, strawberry);
+        // 苹果原价
+        FruitContext appleContext = new FruitContext<Double>(new Apple());
+        BigDecimal appleAmount = appleContext.out(NO_DISCOUNT, apple);
+        // 芒果原价
+        FruitContext mangoContext = new FruitContext<Double>(new Mango());
+        BigDecimal mangoAmount = mangoContext.out(NO_DISCOUNT, mango);
+
         Customer a  = new Customer();
-        List<Fruits> buyList = new ArrayList<>();
-        buyList.add(apple);
-        buyList.add(strawberry);
-        buyList.add(mango);
-        BigDecimal prepaidAmount = a.pay(buyList);
+        List<BigDecimal> buyList = new ArrayList<>();
+        buyList.add(strawberryAmount);
+        buyList.add(appleAmount);
+        buyList.add(mangoAmount);
+        BigDecimal prepaidAmount = a.paySum(buyList);
         System.out.println("合计总价：" + prepaidAmount.toPlainString() + " 元");
     }
 
+    /**
+     * 此处题意“促销活动效果明显，超市继续加大促销力度，购物满 100 减 10 块” 有歧义
+     * 1.是在草莓8折上再满减还是草莓原价满减？此处是折上再满减
+     * 2.满100减10 是每满100减10，还是满200也只减10 ？此处是满200也只减10
+     *
+     * @throws CustomException
+     */
     @Test
     void customerD() throws CustomException {
         Scanner input = new Scanner(System.in);
@@ -153,45 +168,35 @@ class DemoApplicationTests {
         }
         apple.setWeight(appleWeight);
         strawberry.setWeight(strawberryWeight);
-        strawberry.setRate(new BigDecimal("0.8"));
         mango.setWeight(mangoWeight);
+        // 草莓折扣8折
+        FruitContext strawberryContext = new FruitContext<Double>(new Strawberry());
+        BigDecimal strawberryAmount = strawberryContext.out(TWENTY_PERCENT_OFF, strawberry);
+        // 苹果原价
+        FruitContext appleContext = new FruitContext<Double>(new Apple());
+        BigDecimal appleAmount = appleContext.out(NO_DISCOUNT, apple);
+        // 芒果原价
+        FruitContext mangoContext = new FruitContext<Double>(new Mango());
+        BigDecimal mangoAmount = mangoContext.out(NO_DISCOUNT, mango);
         Customer a  = new Customer();
-        List<Fruits> buyList = new ArrayList<>();
-        buyList.add(apple);
-        buyList.add(strawberry);
-        buyList.add(mango);
-        BigDecimal prepaidAmount = a.pay(buyList);
-        RebateStrategy rebate = new RebateStrategy();
-        BigDecimal actualPayment =  rebate.realPrice(prepaidAmount);
-        System.out.println("合计总价：" + actualPayment.toPlainString() + " 元");
+        List<BigDecimal> buyList = new ArrayList<>();
+        buyList.add(strawberryAmount);
+        buyList.add(appleAmount);
+        buyList.add(mangoAmount);
+        BigDecimal prepaidAmount = a.paySum(buyList);
+
+        FullDecrement fullDecrement = new FullDecrement();
+        fullDecrement.setPrice(prepaidAmount);
+        // 满100减10
+        FruitContext fullContext = new FruitContext<Map<String, String>>(fullDecrement);
+        Map<String, String> info = new HashMap<>();
+        info.put("x","100"); // 设置满100减10元
+        info.put("n","10");
+        BigDecimal sumAmount = fullContext.out(info, fullDecrement);
+
+        System.out.println("合计总价：" + sumAmount + " 元");
     }
 
-    @Test
-    void testFruits1() throws CustomException {
-        Scanner input = new Scanner(System.in);
-        System.out.println("请输入苹果重量：");
-        BigDecimal appleWeight = input.nextBigDecimal();// 读取输入的整数
-        System.out.println("请输入草莓重量：");
-        BigDecimal strawberryWeight = input.nextBigDecimal();
-        System.out.println("请输入芒果重量：");
-        BigDecimal mangoWeight = input.nextBigDecimal();
-        String sumStr = appleWeight.add(strawberryWeight).stripTrailingZeros().toPlainString();
-        String m = "[0-9]*";
-        boolean flag = sumStr.matches(m);
-        if (!flag) {
-           throw new CustomException("输入的水果总和不是正整数。");
-        }
-        apple.setWeight(appleWeight);
-        strawberry.setWeight(strawberryWeight);
-        Customer c  = new Customer();
-        List<Fruits> buyList = new ArrayList<>();
-        buyList.add(apple);
-        buyList.add(strawberry);
-        BigDecimal prepaidAmount = c.pay(buyList);
-        RebateStrategy rebate = new RebateStrategy();
-        BigDecimal actualPayment =  rebate.realPrice(prepaidAmount);
-        System.out.println(actualPayment.toPlainString());
-    }
     public static void main(String[] args)throws CustomException {
         DemoApplicationTests test =new DemoApplicationTests();
         while(true) {
